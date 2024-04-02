@@ -113,9 +113,9 @@ def concurrent_transmission():
                 data_rate_of_each_flow_v2u[group_index_k, group_index_u] = calculate_data_rate(num, denom)
                 
 
-        print(data_rate_of_each_flow_u2v)
-        print(data_rate_of_each_flow_v2u)
-        print(data_rate_of_each_flow_v2v)
+        # print(data_rate_of_each_flow_u2v)
+        # print(data_rate_of_each_flow_v2u)
+        # print(data_rate_of_each_flow_v2v)
 
 
         
