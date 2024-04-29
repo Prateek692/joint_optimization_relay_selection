@@ -60,7 +60,11 @@ def concurrent_transmission():
             if relay_type != 'dont_relay' and random_candidate != -1:
                 max_hops[group_index] = 2
         
+        # print('N0W:', background_noise * system_bandwidth)
+        # print('RSI:', rsi)
+
         #v2v
+        # print('v2v num denom pairs')
         for group_index_i in range(group_size):
             flow_index_i = group[group_index_i]
             sender_i = flows[flow_index_i][0]
@@ -75,10 +79,11 @@ def concurrent_transmission():
                     sender_j = flows[flow_index_j][0]
                     distance_j_i = euclidean_distance(*sender_j.calculate_position(total_number_of_slots * slot_duration), *receiver_i.calculate_position(total_number_of_slots * slot_duration))
                     denom += a_v2v[group_index_j, group_index_i] * calculate_mutual_interference(distance_j_i) + b_v2v[group_index_j, group_index_i] * rsi 
-            
+            # print(num,denom)
             data_rate_of_each_flow_v2v[group_index_i] = calculate_data_rate(num, denom)
             
         #u2v
+        # print('u2v num denom pairs')
         for group_index_u in range(uav_size):
             uav_index_u = uavs_in_group[group_index_u]
             sender_u = list_of_uavs[uav_index_u]
@@ -96,9 +101,12 @@ def concurrent_transmission():
                         sender_w = flows[flow_index_w][0]
                         distance_w_k = euclidean_distance(*sender_w.calculate_position(total_number_of_slots * slot_duration), *receiver_k.calculate_position(total_number_of_slots * slot_duration))
                         denom += a_u2v[group_index_w, group_index_k] * calculate_mutual_interference(distance_w_k) + b_u2v[group_index_w, group_index_k] * rsi 
+                        print(calculate_mutual_interference(distance_w_k))
+                # print(num,denom)
                 data_rate_of_each_flow_u2v[group_index_u, group_index_k] = calculate_data_rate(num, denom)
                 
         #v2u
+        # print('v2u num denom pairs')
         for group_index_k in range(group_size):
             flow_index_k = group[group_index_k]
             sender_k = flows[flow_index_k][0]
@@ -109,18 +117,19 @@ def concurrent_transmission():
                 distance_k_u = math.sqrt(euclidean_distance(*sender_k.calculate_position(total_number_of_slots * slot_duration), *receiver_u.calculate_position(total_number_of_slots * slot_duration)) ** 2 + height_of_uav ** 2)
                 num = kv * transmission_power * maximum_antenna_gain * (distance_k_u ** -pl_factor_for_v2v) * calculate_small_scale_power_fading()
                 denom = background_noise * system_bandwidth
-                # print('v2u',num)
+                # print(num,denom)
                 data_rate_of_each_flow_v2u[group_index_k, group_index_u] = calculate_data_rate(num, denom)
-                
 
+        # print('Initial:')
         # print(data_rate_of_each_flow_u2v)
         # print(data_rate_of_each_flow_v2u)
         # print(data_rate_of_each_flow_v2v)
+        # print('u2v:',np.min(data_rate_of_each_flow_u2v),np.max(data_rate_of_each_flow_u2v))
+        # print('v2u:',np.min(data_rate_of_each_flow_v2u),np.max(data_rate_of_each_flow_v2u))
+        # print('v2v:',np.min(data_rate_of_each_flow_v2v),np.max(data_rate_of_each_flow_v2v))
 
-
-        
         while flows_remaining:
-            print(flows_remaining, current_group_slots)
+            # print(flows_remaining, current_group_slots)
             if new_hops_completed:
                 new_hops_completed = False
                 
@@ -196,7 +205,10 @@ def concurrent_transmission():
                         data_rate_of_each_flow_v2u[group_index_k, group_index_u] = calculate_data_rate(num, denom)
                 
             current_group_slots += 1
-
+            # print(current_group_slots,':')
+            # print(data_rate_of_each_flow_u2v)
+            # print(data_rate_of_each_flow_v2u)
+            # print(data_rate_of_each_flow_v2v)
             
 
 
@@ -212,7 +224,7 @@ def concurrent_transmission():
                     relay_type, candidate_set, random_candidate = flows_candidate_relay_set_pairs[str([flow_index,0.0])]
                     if random_candidate.type == 'vehicle':
                         
-                        if data_rate_of_each_flow_v2v[group_index] * current_group_slots * slot_duration >= throughputs[flow_index] * number_of_time_slots:
+                        if data_rate_of_each_flow_v2v[group_index] * current_group_slots >= throughputs[flow_index] * number_of_time_slots:
                             # Idhar nahi ho raha call
                             completed_sender_vehicles.add(group_index)
                             completed_receiver_vehicles.add(group_index)
@@ -223,20 +235,20 @@ def concurrent_transmission():
                         uav_index = uav_object_to_index_map[random_candidate]
 
                         if current_hops[group_index] == 1:
-                            if data_rate_of_each_flow_v2u[group_index, uav_index] * current_group_slots * slot_duration >= throughputs[flow_index] * number_of_time_slots:
+                            if data_rate_of_each_flow_v2u[group_index, uav_index] * current_group_slots >= throughputs[flow_index] * number_of_time_slots:
                                 completed_sender_vehicles.add(group_index)
 #                                 completed_receiver_uavs(uav_index)
                                 current_hops[group_index] += 1
                                 new_hops_completed = True
                         else:
-                            if (data_rate_of_each_flow_v2u[group_index, uav_index] + data_rate_of_each_flow_u2v[uav_index, group_index]) * current_group_slots * slot_duration >= throughputs[flow_index] * number_of_time_slots:
+                            if (data_rate_of_each_flow_v2u[group_index, uav_index] + data_rate_of_each_flow_u2v[uav_index, group_index]) * current_group_slots  >= throughputs[flow_index] * number_of_time_slots:
 #                                 completed_sender_uavs(uav_index)
                                 completed_receiver_vehicles.add(group_index)
                                 current_hops[group_index] += 1
                                 new_hops_completed = True
                                 flows_remaining -= 1
                 else:
-                    if data_rate_of_each_flow_v2v[group_index] * current_group_slots * slot_duration >= throughputs[flow_index] * number_of_time_slots:
+                    if data_rate_of_each_flow_v2v[group_index] * current_group_slots  >= throughputs[flow_index] * number_of_time_slots:
                         completed_sender_vehicles.add(group_index)
                         completed_receiver_vehicles.add(group_index)
                         current_hops[group_index] += 1    
